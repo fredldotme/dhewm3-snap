@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=Doom 3
+Icon=${SNAP}/snap/gui/dhewm3.png
+Exec=dhewm3.dhewm3
+Categories=Game;ActionGame;
+Keywords=first;person;shooter;doom;

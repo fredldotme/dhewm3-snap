@@ -1,0 +1,120 @@
+name: dhewm3
+version: 1.5.3
+license: GPL-3.0
+grade: stable
+summary: Doom 3 Game Engine
+description: |
+  dhewm 3 is a Doom 3 GPL source port, known to work on at least Windows, Linux, macOS and FreeBSD.
+  The goal of dhewm 3 is bring DOOM 3 with the help of SDL to all suitable platforms.
+confinement: strict
+base: core22
+architectures:
+  - build-on: amd64
+  - build-on: arm64
+
+apps:
+  dhewm3:
+    environment:
+      LD_LIBRARY_PATH: $SNAP/usr/lib/$CRAFT_ARCH_TRIPLET/pulseaudio:$SNAP/usr/lib/$CRAFT_ARCH_TRIPLET
+      XKB_CONFIG_ROOT: $SNAP/usr/share/X11/xkb
+    command-chain:
+    - bin/wayland-launch
+    - bin/graphics-core22-wrapper
+    command: bin/dhewm3-launch
+    plugs: [ wayland, x11, desktop, home, opengl, audio-playback, removable-media, network, joystick ]
+
+plugs:
+  graphics-core22:
+    interface: content
+    target: $SNAP/graphics
+    default-provider: mesa-core22
+
+layout:
+  /usr/share/libdrm:
+    bind: $SNAP/graphics/libdrm
+  /usr/share/drirc.d:
+    symlink: $SNAP/graphics/drirc.d
+  /usr/share/X11/XErrorDB:
+    symlink: $SNAP/graphics/X11/XErrorDB
+  /usr/share/X11/locale:
+    symlink: $SNAP/graphics/X11/locale
+  /usr/share/X11/xkb:
+    symlink: $SNAP/graphics/X11/xkb
+  /usr/share/alsa:
+    bind: $SNAP/usr/share/alsa
+  /etc/alsa:
+    bind: $SNAP/etc/alsa
+  /etc/openal:
+    bind: $SNAP/etc/openal
+
+parts:
+  dhewm3:
+    source: https://github.com/dhewm/dhewm3
+    source-type: git
+    source-tag: 1.5.3
+    source-subdir: neo
+    plugin: cmake
+    cmake-parameters:
+      - -DCMAKE_INSTALL_PREFIX=/usr
+      - -DCMAKE_INSTALL_LIBDIR=/usr/lib
+    override-prime: |
+      craftctl default
+      cd $CRAFT_PRIME
+      ln -sf ../lib/dhewm3/base.so usr/bin/base.so
+    build-packages:
+      - make
+      - build-essential
+      - libcurl4-gnutls-dev
+      - libgl1-mesa-dev
+      - libsdl2-dev
+      - libpulse-dev
+      - libvulkan-dev
+      - libwayland-dev
+      - libvorbis-dev
+      - libmad0-dev
+      - libogg-dev
+      - libopenal-dev
+      - zlib1g-dev
+    stage-packages:
+      - libsdl2-2.0-0
+      - libcurl3-gnutls
+      - libnghttp2-14
+      - libpsl5
+      - libasound2
+      - libasound2-plugins
+      - libpulse0
+      - libvorbis0a
+      - libmad0
+      - libwayland-client0
+      - libogg0
+      - libopenal1
+      - libopenal-data
+      - zlib1g
+  wrapper:
+    source: snap/local
+    plugin: dump
+    override-build: |
+      # The plugs needed to run Wayland. (wayland-launch checks them, setup.sh connects them)
+      # You may add further plugs here if you want these options
+      PLUGS="opengl wayland graphics-core22"
+      sed --in-place "s/%PLUGS%/$PLUGS/g" $SNAPCRAFT_PART_BUILD/wayland-launch
+      sed --in-place "s/%PLUGS%/$PLUGS/g" $SNAPCRAFT_PART_BUILD/setup.sh
+      sed --in-place "s/%SNAP%/$SNAPCRAFT_PROJECT_NAME/g" $SNAPCRAFT_PART_BUILD/wayland-launch
+      sed --in-place "s/%SNAP%/$SNAPCRAFT_PROJECT_NAME/g" $SNAPCRAFT_PART_BUILD/setup.sh
+      snapcraftctl build
+    stage-packages:
+      - inotify-tools
+    organize:
+      dhewm3-launch: bin/dhewm3-launch
+      wayland-launch: bin/wayland-launch
+      setup.sh: bin/setup.sh
+    after: [ dhewm3 ]
+  graphics-core22:
+    after: [ wrapper ]
+    source: https://github.com/MirServer/graphics-core22.git
+    plugin: dump
+    override-prime: |
+      craftctl default
+      ${CRAFT_PART_SRC}/bin/graphics-core22-cleanup mesa-core22 nvidia-core22
+    prime:
+    - bin/graphics-core22-wrapper

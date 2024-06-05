@@ -1,0 +1,8 @@
+#!/bin/bash
+
+if [ ! -e "$XDG_RUNTIME_DIR/pulse/native" ]; then
+    mkdir -p XDG_RUNTIME_DIR/pulse
+    ln -sf ../../pulse/native $XDG_RUNTIME_DIR/pulse/native
+fi
+
+exec $SNAP/usr/bin/dhewm3 +set fs_basepath $SNAP_USER_COMMON/dhewm3 "$@"
